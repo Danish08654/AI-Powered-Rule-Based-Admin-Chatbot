@@ -295,7 +295,7 @@ st.markdown(
     .stApp{ background:var(--bg); }
     #MainMenu, footer, [data-testid="stToolbar"]{ visibility:hidden; height:0; }
     [data-testid="stHeader"]{ background:transparent; }
-    [data-testid="stAppViewContainer"] > .main{ padding-top:05rem; }
+    [data-testid="stAppViewContainer"] > .main{ padding-top:5rem; }
     .block-container{ padding-top:1.2rem; max-width:900px; }
 
     /* sidebar */
