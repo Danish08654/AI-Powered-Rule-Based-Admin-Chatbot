@@ -117,9 +117,9 @@ def handle_command(conn, raw_text):
         return f" User {email} added with phone {phone}{extra}."
 
     # ---- Remove user ----
+    
     # Exact confirm phrase must be checked BEFORE the looser "remove all
-    # users" substring check below, since "confirm remove all users" also
-    # contains that substring and would otherwise always match first.
+    
     if msg == "confirm remove all users":
         if st.session_state.get("pending_action") == "remove_all":
             conn.execute("DELETE FROM users")
@@ -484,7 +484,6 @@ def login_view():
     st.markdown(
         '<div class="login-mark">◆</div>'
         '<div class="login-title">Admin Console</div>'
-        '<div class="login-sub">Sign in to manage your user directory</div>',
         unsafe_allow_html=True,
     )
     
@@ -501,10 +500,10 @@ def login_view():
             st.session_state.messages = []
             st.rerun()
         else:
-            st.error("Email not found in system. Ask an existing admin to add you first.")
+            st.error("Email not found in system. Admin to add you first.")
     st.markdown(
         f'<div class="login-hint">First time here? <code>{html.escape(ADMIN_EMAIL)}</code> '
-        f'is pre-seeded so you can sign in immediately.</div>',
+        f'you can sign in immediately.</div>',
         unsafe_allow_html=True,
     )
     
@@ -535,9 +534,7 @@ def render_sidebar(conn):
             run_and_log(conn, "help")
             st.rerun()
 
-        st.markdown('<div class="sidebar-section-label">Command reference</div>', unsafe_allow_html=True)
-        with st.expander("View syntax", expanded=False):
-            st.markdown(HELP_TEXT)
+
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("---")
@@ -557,7 +554,6 @@ def chat_view():
         <div class="console-header">
           <div>
             <div class="console-title">Conversations</div>
-            <div class="console-sub">Manage users with plain-English commands</div>
           </div>
           <div class="pill"><span class="pill-dot"></span>{user_count(conn)} users online in directory</div>
         </div>
