@@ -42,6 +42,8 @@ streamlit run app.py
 
 - ---
 
-# Made by Danish Zulfiqar
+# Developed by Danish Zulfiqar
 
+if project insightful for you kindly give me support star.
+and further improvements sugestion.
 ----
