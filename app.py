@@ -1,3 +1,4 @@
+import html
 import os
 import re
 import sqlite3
@@ -15,14 +16,13 @@ except Exception:
     ADMIN_EMAIL = DEFAULT_ADMIN_EMAIL
 
 HELP_TEXT = (
-    "**Here's what I can do:**\n\n"
-    "- `add the user \"email\" phone number \"+123456789\"` "
-    "(optionally add `city \"Lahore\"`)\n"
+    "**Here's what I can do:**\n"
+    "- `add the user \"email\" phone number \"+123456789\"` (optionally add `city \"Lahore\"`)\n"
     "- `remove the user \"email\"` / `delete the user \"email\"`\n"
     "- `update \"email\" city to Lahore`\n"
     "- `update \"email\" phone to +123456789`\n"
     "- `update \"email\" email to new@example.com`\n"
-    "- `search user \"email\"` / `find user \"email\"` (show details)\n"
+    "- `search user \"email\"` / `find user \"email\"`\n"
     "- `count users` / `how many users`\n"
     "- `show all users` / `list users`\n"
     "- `remove all users` (asks for confirmation)\n"
@@ -46,7 +46,6 @@ def get_conn():
     )
     conn.commit()
 
-    # Seed a first admin account so the app is never impossible to log into.
     cur = conn.execute("SELECT COUNT(*) FROM users")
     if cur.fetchone()[0] == 0:
         conn.execute(
@@ -67,6 +66,10 @@ def find_user(conn, email):
 def all_users(conn):
     cur = conn.execute("SELECT email, phone, city FROM users ORDER BY email")
     return cur.fetchall()
+
+
+def user_count(conn):
+    return conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
 
 
 # Command parsing / handling
@@ -115,7 +118,7 @@ def handle_command(conn, raw_text):
     # ---- Remove user ----
     if "remove all users" in msg:
         st.session_state.pending_action = "remove_all"
-        return ("This will delete **all** users permanently. "
+        return (" This will delete **all** users permanently. "
                 "Type `confirm remove all users` to proceed.")
 
     if msg == "confirm remove all users":
@@ -178,13 +181,13 @@ def handle_command(conn, raw_text):
         if not user:
             return f"User {email} not found."
         _, e, phone, city = user
-        return (f" **{e}**\n"
+        return (f"📋 **{e}**\n"
                 f"- Phone: {phone or 'N/A'}\n"
                 f"- City: {city or 'N/A'}")
 
     # ---- Count users ----
     if "count users" in msg or "how many users" in msg:
-        n = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        n = user_count(conn)
         return f"There {'is' if n == 1 else 'are'} {n} user(s) in the system."
 
     # ---- List all users ----
@@ -198,22 +201,246 @@ def handle_command(conn, raw_text):
     return "Sorry, I didn't understand that command. Type `help` to see available commands."
 
 
-# UI
+# Presentation helpers
 
-st.set_page_config(page_title="Admin Chatbot", page_icon="👩‍💻", layout="centered")
+def initials_of(email):
+    local = (email or "?").split("@")[0]
+    parts = re.split(r"[.\-_]+", local)
+    parts = [p for p in parts if p]
+    if len(parts) >= 2:
+        return (parts[0][0] + parts[1][0]).upper()
+    return local[:2].upper() if len(local) >= 2 else local[:1].upper()
+
+
+def md_lite_to_html(text):
+    """Render the small markdown subset used by bot replies (bold, inline
+    code, and '- ' bullet lists) as safe HTML."""
+    text = html.escape(text)
+    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
+
+    out, in_list = [], False
+    for line in text.split("\n"):
+        if line.startswith("- "):
+            if not in_list:
+                out.append("<ul>")
+                in_list = True
+            out.append(f"<li>{line[2:]}</li>")
+        else:
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            if line.strip():
+                out.append(f"<p>{line}</p>")
+    if in_list:
+        out.append("</ul>")
+    return "".join(out)
+
+
+def render_message(role, content, user_email=None):
+    is_user = role == "user"
+    if is_user:
+        avatar = initials_of(user_email or "admin")
+        avatar_class = "avatar avatar-user"
+        bubble_class = "bubble bubble-user"
+        body_html = html.escape(content)
+        row = f"""
+        <div class="msg-row msg-user">
+          <div class="{bubble_class}"><p>{body_html}</p></div>
+          <div class="{avatar_class}">{avatar}</div>
+        </div>"""
+    else:
+        body_html = md_lite_to_html(content)
+        row = f"""
+        <div class="msg-row msg-bot">
+          <div class="avatar avatar-bot">◆</div>
+          <div class="bubble bubble-bot">{body_html}</div>
+        </div>"""
+    st.markdown(row, unsafe_allow_html=True)
+
+
+# Global styling
+
+st.set_page_config(page_title="Admin Console", page_icon="◆", layout="wide")
 
 st.markdown(
     """
     <style>
-    .app-header {
-        background: linear-gradient(135deg, #007bff, #6c63ff);
-        color: white;
-        padding: 16px 20px;
-        border-radius: 12px;
-        font-size: 20px;
-        font-weight: 600;
-        margin-bottom: 16px;
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root{
+        --ink:#0F172A;
+        --muted:#64748B;
+        --bg:#EEF1F7;
+        --surface:#FFFFFF;
+        --border:#E2E8F0;
+        --primary:#4338CA;
+        --primary-2:#6366F1;
+        --primary-soft:#EEF2FF;
+        --success:#15803D;
+        --danger:#DC2626;
     }
+
+    html, body, [class*="css"]{
+        font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color:var(--ink);
+    }
+
+    /* page chrome */
+    .stApp{ background:var(--bg); }
+    #MainMenu, footer, [data-testid="stToolbar"]{ visibility:hidden; height:0; }
+    [data-testid="stHeader"]{ background:transparent; }
+    [data-testid="stAppViewContainer"] > .main{ padding-top:0.5rem; }
+    .block-container{ padding-top:1.2rem; max-width:900px; }
+
+    /* sidebar */
+    [data-testid="stSidebar"]{
+        background:var(--ink);
+        border-right:1px solid #1E293B;
+    }
+    [data-testid="stSidebar"] *{ color:#E2E8F0 !important; }
+    [data-testid="stSidebar"] .stButton>button{
+        background:#1E293B;
+        border:1px solid #334155;
+        color:#F1F5F9 !important;
+        border-radius:10px;
+        font-size:13.5px;
+        font-weight:500;
+        text-align:left;
+        padding:8px 12px;
+    }
+    [data-testid="stSidebar"] .stButton>button:hover{
+        border-color:var(--primary-2);
+        background:#273449;
+    }
+    [data-testid="stSidebar"] [data-testid="stMetricValue"]{
+        color:#FFFFFF !important;
+        font-family:'Sora', sans-serif;
+    }
+    [data-testid="stSidebar"] [data-testid="stMetricLabel"]{ color:#94A3B8 !important; }
+    [data-testid="stSidebar"] hr{ border-color:#1E293B; }
+
+    .brand{
+        display:flex; align-items:center; gap:10px;
+        margin-bottom:4px;
+    }
+    .brand-mark{
+        width:34px; height:34px; border-radius:9px; flex-shrink:0;
+        background:linear-gradient(135deg, var(--primary-2), var(--primary));
+        display:flex; align-items:center; justify-content:center;
+        color:white; font-family:'Sora', sans-serif; font-weight:700; font-size:15px;
+        box-shadow:0 4px 10px rgba(67,56,202,0.35);
+    }
+    .brand-name{ font-family:'Sora', sans-serif; font-weight:700; font-size:16.5px; color:#fff !important; }
+    .brand-sub{ font-size:12px; color:#94A3B8 !important; margin-top:-2px; }
+
+    .sidebar-section-label{
+        font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+        color:#64748B !important; font-weight:600; margin:18px 0 8px 0;
+    }
+
+    /* main header */
+    .console-header{
+        display:flex; align-items:center; justify-content:space-between;
+        margin-bottom:18px;
+    }
+    .console-title{ font-family:'Sora', sans-serif; font-weight:700; font-size:22px; color:var(--ink); }
+    .console-sub{ font-size:13px; color:var(--muted); margin-top:2px; }
+    .pill{
+        background:var(--surface); border:1px solid var(--border);
+        padding:6px 12px; border-radius:999px; font-size:12.5px; color:var(--muted);
+        display:flex; align-items:center; gap:6px;
+    }
+    .pill-dot{ width:7px; height:7px; border-radius:50%; background:var(--success); display:inline-block; }
+
+    /* chat card */
+    .chat-card{
+        background:var(--surface); border:1px solid var(--border);
+        border-radius:16px; padding:20px 20px 6px 20px;
+        box-shadow:0 1px 2px rgba(15,23,42,0.04);
+        margin-bottom:14px;
+    }
+
+    /* message rows */
+    .msg-row{ display:flex; align-items:flex-end; gap:10px; margin-bottom:14px; }
+    .msg-user{ justify-content:flex-end; }
+    .msg-bot{ justify-content:flex-start; }
+
+    .avatar{
+        width:30px; height:30px; border-radius:8px; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+        font-size:12px; font-weight:700; font-family:'Sora', sans-serif;
+    }
+    .avatar-bot{
+        background:linear-gradient(135deg, var(--primary-2), var(--primary));
+        color:white;
+    }
+    .avatar-user{
+        background:var(--ink); color:white;
+    }
+
+    .bubble{
+        max-width:72%; padding:11px 15px; border-radius:14px; font-size:14.5px; line-height:1.5;
+    }
+    .bubble p{ margin:0 0 4px 0; }
+    .bubble p:last-child{ margin-bottom:0; }
+    .bubble ul{ margin:2px 0 4px 18px; padding:0; }
+    .bubble li{ margin-bottom:2px; }
+    .bubble code{
+        background:rgba(15,23,42,0.06); padding:1px 5px; border-radius:5px;
+        font-family:'JetBrains Mono', monospace; font-size:12.8px;
+    }
+
+    .bubble-bot{
+        background:#F8FAFC; border:1px solid var(--border); color:var(--ink);
+        border-bottom-left-radius:4px;
+    }
+    .bubble-bot code{ background:var(--primary-soft); color:var(--primary); }
+    .bubble-user{
+        background:linear-gradient(135deg, var(--primary-2), var(--primary));
+        color:white; border-bottom-right-radius:4px;
+    }
+
+    /* chat input */
+    [data-testid="stChatInput"]{
+        border-radius:14px; border:1px solid var(--border);
+        background:var(--surface); box-shadow:0 1px 2px rgba(15,23,42,0.04);
+    }
+    [data-testid="stChatInput"] textarea{ font-size:14.5px; }
+
+    /* login card */
+    .login-wrap{ display:flex; justify-content:center; margin-top:6vh; }
+    .login-card{
+        background:var(--surface); border:1px solid var(--border);
+        border-radius:18px; padding:36px 34px; width:100%; max-width:400px;
+        box-shadow:0 10px 30px rgba(15,23,42,0.08);
+        text-align:center;
+    }
+    .login-mark{
+        width:52px; height:52px; border-radius:14px; margin:0 auto 16px auto;
+        background:linear-gradient(135deg, var(--primary-2), var(--primary));
+        display:flex; align-items:center; justify-content:center;
+        color:white; font-family:'Sora', sans-serif; font-weight:700; font-size:22px;
+        box-shadow:0 8px 20px rgba(67,56,202,0.3);
+    }
+    .login-title{ font-family:'Sora', sans-serif; font-weight:700; font-size:20px; color:var(--ink); margin-bottom:4px; }
+    .login-sub{ font-size:13.5px; color:var(--muted); margin-bottom:22px; }
+    .login-hint{
+        font-size:12px; color:var(--muted); margin-top:16px;
+        background:var(--primary-soft); border-radius:8px; padding:8px 10px;
+    }
+    .login-hint code{ font-family:'JetBrains Mono', monospace; color:var(--primary); }
+
+    .stTextInput input{ border-radius:10px; border:1px solid var(--border); padding:10px 12px; }
+    .stTextInput input:focus{ border-color:var(--primary-2); box-shadow:0 0 0 3px var(--primary-soft); }
+
+    div[data-testid="stForm"] .stButton>button,
+    .main .stButton>button{
+        background:linear-gradient(135deg, var(--primary-2), var(--primary));
+        color:white; border:none; border-radius:10px; font-weight:600;
+        padding:10px 16px; box-shadow:0 4px 12px rgba(67,56,202,0.25);
+    }
+    .main .stButton>button:hover{ filter:brightness(1.05); }
     </style>
     """,
     unsafe_allow_html=True,
@@ -231,12 +458,28 @@ if "pending_action" not in st.session_state:
     st.session_state.pending_action = None
 
 
+def run_and_log(conn, cmd_text):
+    st.session_state.messages.append({"role": "user", "content": cmd_text})
+    try:
+        reply = handle_command(conn, cmd_text)
+    except Exception as exc:
+        reply = f" Something went wrong processing that command: {exc}"
+    st.session_state.messages.append({"role": "assistant", "content": reply})
+
+
+# Views
+
 def login_view():
-    st.markdown("<div class='app-header'> Admin Chatbot Login</div>", unsafe_allow_html=True)
-    st.caption(f"First time here? `{ADMIN_EMAIL}` is pre-seeded so you can log in immediately.")
+    st.markdown('<div class="login-wrap"><div class="login-card">', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="login-mark">◆</div>'
+        '<div class="login-title">Admin Console</div>'
+        '<div class="login-sub">Sign in to manage your user directory</div>',
+        unsafe_allow_html=True,
+    )
     with st.form("login_form", clear_on_submit=False):
-        email = st.text_input("Enter your email", key="login_email")
-        submitted = st.form_submit_button("Login", use_container_width=True)
+        email = st.text_input("Email", key="login_email", placeholder="you@example.com", label_visibility="collapsed")
+        submitted = st.form_submit_button("Sign in", use_container_width=True)
     if submitted:
         email = (email or "").strip().lower()
         if not email:
@@ -248,39 +491,87 @@ def login_view():
             st.rerun()
         else:
             st.error("Email not found in system. Ask an existing admin to add you first.")
+    st.markdown(
+        f'<div class="login-hint">First time here? <code>{html.escape(ADMIN_EMAIL)}</code> '
+        f'is pre-seeded so you can sign in immediately.</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
-def chat_view():
-    header_col, logout_col = st.columns([4, 1])
-    with header_col:
-        st.markdown("<div class='app-header'> Admin Chatbot</div>", unsafe_allow_html=True)
-    with logout_col:
-        if st.button("Logout", use_container_width=True):
+def render_sidebar(conn):
+    with st.sidebar:
+        st.markdown(
+            '<div class="brand">'
+            '<div class="brand-mark">◆</div>'
+            '<div><div class="brand-name">Admin Console</div>'
+            '<div class="brand-sub">User directory</div></div>'
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.metric("Total users", user_count(conn))
+
+        st.markdown('<div class="sidebar-section-label">Quick actions</div>', unsafe_allow_html=True)
+        if st.button("  List all users", use_container_width=True, key="qa_list"):
+            run_and_log(conn, "list users")
+            st.rerun()
+        if st.button("  Count users", use_container_width=True, key="qa_count"):
+            run_and_log(conn, "count users")
+            st.rerun()
+        if st.button("  Show help", use_container_width=True, key="qa_help"):
+            run_and_log(conn, "help")
+            st.rerun()
+
+        st.markdown('<div class="sidebar-section-label">Command reference</div>', unsafe_allow_html=True)
+        with st.expander("View syntax", expanded=False):
+            st.markdown(HELP_TEXT)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("---")
+        st.caption(f"Signed in as **{st.session_state.user_email}**")
+        if st.button("Log out", use_container_width=True, key="logout_btn"):
             st.session_state.logged_in = False
             st.session_state.user_email = None
             st.session_state.pending_action = None
             st.rerun()
 
+
+def chat_view():
+    render_sidebar(conn)
+
+    st.markdown(
+        f"""
+        <div class="console-header">
+          <div>
+            <div class="console-title">Conversations</div>
+            <div class="console-sub">Manage users with plain-English commands</div>
+          </div>
+          <div class="pill"><span class="pill-dot"></span>{user_count(conn)} users online in directory</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     if not st.session_state.messages:
         st.session_state.messages.append(
-            {"role": "assistant", "content": "👋 Hello! How can I help you manage users today? Type `help` for a list of commands."}
+            {
+                "role": "assistant",
+                "content": " Hello! How can I help you ? Type `help` for a list of commands.",
+            }
         )
 
+    st.markdown('<div class="chat-card">', unsafe_allow_html=True)
     for m in st.session_state.messages:
-        with st.chat_message(m["role"]):
-            st.markdown(m["content"])
+        render_message(m["role"], m["content"], st.session_state.user_email)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     prompt = st.chat_input(
-        "Type a command (e.g. add the user \"a@b.com\" phone number \"+123\")...",
+        'Type a command, e.g. add the user "a@b.com" phone number "+123"...',
         key="chat_input_box",
     )
     if prompt:
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        try:
-            reply = handle_command(conn, prompt)
-        except Exception as exc:  # keep the chatbot alive even on unexpected errors
-            reply = f" Something went wrong processing that command: {exc}"
-        st.session_state.messages.append({"role": "assistant", "content": reply})
+        run_and_log(conn, prompt)
         st.rerun()
 
 
