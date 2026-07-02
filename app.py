@@ -25,7 +25,7 @@ HELP_TEXT = (
     "- `search user \"email\"` / `find user \"email\"`\n"
     "- `count users` / `how many users`\n"
     "- `show all users` / `list users`\n"
-    "- `remove all users` (asks for confirmation)\n"
+    "- `remove all users` \n"
     "- `help` - show this message again"
 )
 
