@@ -523,8 +523,6 @@ def render_sidebar(conn):
             run_and_log(conn, "help")
             st.rerun()
 
-       
-
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("---")
         st.caption(f"Signed in as **{st.session_state.user_email}**")
