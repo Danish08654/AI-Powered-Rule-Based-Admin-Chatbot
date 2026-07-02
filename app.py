@@ -172,7 +172,7 @@ def handle_command(conn, raw_text):
             return f" Updated {email}'s email to {new_email}."
         return f"I can only update phone, city, or email, not '{field}'."
 
-    # ---- Search / find single user ----
+    # ---- Search / find user ----
     if "search user" in msg or "find user" in msg or "show user" in msg:
         email = extract_email(raw_text)
         if not email:
