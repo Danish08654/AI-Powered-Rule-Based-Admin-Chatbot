@@ -1,8 +1,20 @@
 # Admin Chatbot 
 
-A chat-style admin tool for managing users (add / remove / update / search /
-count / list) via natural-language commands, backed by a local SQLite
-database (`users.db`, created automatically on first run).
+A chat-style admin tool for managing users
+
+add 
+
+remove 
+
+update 
+
+search 
+
+count 
+
+list
+
+via natural-language commands.
 
 ----
 
@@ -12,14 +24,6 @@ database (`users.db`, created automatically on first run).
 pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
-
------
-
-Then open the URL Streamlit prints (usually `http://localhost:8501`).
-
-On first run, the app seeds one admin account (`admin@example.com` by
-default) so you always have a way to log in. Change this by setting an
-`ADMIN_EMAIL` secret (see below).
 
 -----
 
