@@ -523,9 +523,7 @@ def render_sidebar(conn):
             run_and_log(conn, "help")
             st.rerun()
 
-        st.markdown('<div class="sidebar-section-label">Command reference</div>', unsafe_allow_html=True)
-        with st.expander("View syntax", expanded=False):
-            st.markdown(HELP_TEXT)
+       
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("---")
