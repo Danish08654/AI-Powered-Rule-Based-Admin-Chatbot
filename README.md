@@ -22,7 +22,7 @@ via natural-language commands.
 
 ```bash
 pip install -r requirements.txt
-streamlit run streamlit_app.py
+streamlit run app.py
 ```
 
 -----
