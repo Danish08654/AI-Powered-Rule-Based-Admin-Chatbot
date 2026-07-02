@@ -1,6 +1,6 @@
 # Admin Chatbot 
 
-A chat-style admin tool for managing users
+A admin Chatbot tool for managing users
 
 add 
 
