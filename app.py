@@ -541,7 +541,6 @@ def chat_view():
         <div class="console-header">
           <div>
             <div class="console-title">Conversations</div>
-            <div class="console-sub">Manage users with plain-English commands</div>
           </div>
           <div class="pill"><span class="pill-dot"></span>{user_count(conn)} users online in directory</div>
         </div>
