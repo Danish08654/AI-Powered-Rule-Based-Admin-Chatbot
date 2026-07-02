@@ -483,7 +483,7 @@ def login_view():
     st.markdown('<div class="login-wrap"><div class="login-card">', unsafe_allow_html=True)
     st.markdown(
         '<div class="login-mark">◆</div>'
-        '<div class="login-title">Admin Console</div>'
+        '<div class="login-title">Admin Console</div>',
         unsafe_allow_html=True,
     )
     
