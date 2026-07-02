@@ -259,7 +259,7 @@ def render_message(role, content, user_email=None):
         <div class="msg-row msg-bot">
           <div class="avatar avatar-bot">◆</div>
           <div class="bubble bubble-bot">{body_html}</div>
-        </div>"Admin Console"
+        </div>"""
     st.markdown(row, unsafe_allow_html=True)
 
 
@@ -295,7 +295,7 @@ st.markdown(
     .stApp{ background:var(--bg); }
     #MainMenu, footer, [data-testid="stToolbar"]{ visibility:hidden; height:0; }
     [data-testid="stHeader"]{ background:transparent; }
-    [data-testid="stAppViewContainer"] > .main{ padding-top:5rem; }
+    [data-testid="stAppViewContainer"] > .main{ padding-top:0.5rem; }
     .block-container{ padding-top:1.2rem; max-width:900px; }
 
     /* sidebar */
