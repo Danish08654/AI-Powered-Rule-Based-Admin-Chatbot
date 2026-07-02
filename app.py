@@ -1,22 +1,3 @@
-"""
-Admin Console - a chat-driven user directory manager.
-
-Manage users (add / remove / update / search / count / list) through
-natural-language commands, backed by a local SQLite database.
-
-Run locally:
-    streamlit run streamlit_app.py
-
-Deploy on Streamlit Community Cloud:
-    1. Push this folder to a GitHub repo (streamlit_app.py + requirements.txt).
-    2. Go to https://share.streamlit.io -> "New app" -> pick the repo/branch.
-    3. Set "Main file path" to streamlit_app.py and deploy.
-    4. (Optional) In App settings -> Secrets, set:
-           ADMIN_EMAIL = "you@example.com"
-       That email is auto-seeded into the database on first run so you
-       always have at least one account that can log in.
-"""
-
 import html
 import os
 import re
@@ -24,9 +5,8 @@ import sqlite3
 
 import streamlit as st
 
-# --------------------------------------------------------------------------
 # Config
-# --------------------------------------------------------------------------
+
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
 
 DEFAULT_ADMIN_EMAIL = "admin@example.com"
@@ -49,9 +29,9 @@ HELP_TEXT = (
     "- `help` - show this message again"
 )
 
-# --------------------------------------------------------------------------
+
 # Database helpers
-# --------------------------------------------------------------------------
+
 @st.cache_resource
 def get_conn():
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
@@ -93,9 +73,8 @@ def user_count(conn):
     return conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
 
 
-# --------------------------------------------------------------------------
 # Command parsing / handling
-# --------------------------------------------------------------------------
+
 QUOTED = r'"([^"]+)"'
 
 
@@ -135,7 +114,7 @@ def handle_command(conn, raw_text):
         )
         conn.commit()
         extra = f", city {city}" if city else ""
-        return f"✅ User {email} added with phone {phone}{extra}."
+        return f" User {email} added with phone {phone}{extra}."
 
     # ---- Remove user ----
     # Exact confirm phrase must be checked BEFORE the looser "remove all
@@ -146,12 +125,12 @@ def handle_command(conn, raw_text):
             conn.execute("DELETE FROM users")
             conn.commit()
             st.session_state.pending_action = None
-            return "🗑️ All users have been removed."
+            return " All users have been removed."
         return "Nothing to confirm."
 
     if "remove all users" in msg:
         st.session_state.pending_action = "remove_all"
-        return ("⚠️ This will delete **all** users permanently. "
+        return (" This will delete **all** users permanently. "
                 "Type `confirm remove all users` to proceed.")
 
     if "remove the user" in msg or "delete the user" in msg:
@@ -162,7 +141,7 @@ def handle_command(conn, raw_text):
         if user:
             conn.execute("DELETE FROM users WHERE email = ?", (email,))
             conn.commit()
-            return f"🗑️ User {email} removed successfully."
+            return f" User {email} removed successfully."
         return f"User {email} not found."
 
     # ---- Update user ----
@@ -183,21 +162,21 @@ def handle_command(conn, raw_text):
         if field == "city":
             conn.execute("UPDATE users SET city = ? WHERE email = ?", (value, email))
             conn.commit()
-            return f"✏️ Updated {email}'s city to {value}."
+            return f" Updated {email}'s city to {value}."
         if field == "phone":
             conn.execute("UPDATE users SET phone = ? WHERE email = ?", (value, email))
             conn.commit()
-            return f"✏️ Updated {email}'s phone to {value}."
+            return f" Updated {email}'s phone to {value}."
         if field == "email":
             new_email = value.lower()
             if find_user(conn, new_email):
                 return f"Cannot update: {new_email} is already in use."
             conn.execute("UPDATE users SET email = ? WHERE email = ?", (new_email, email))
             conn.commit()
-            return f"✏️ Updated {email}'s email to {new_email}."
+            return f" Updated {email}'s email to {new_email}."
         return f"I can only update phone, city, or email, not '{field}'."
 
-    # ---- Search / find single user ----
+    # ---- Search 
     if "search user" in msg or "find user" in msg or "show user" in msg:
         email = extract_email(raw_text)
         if not email:
@@ -206,7 +185,7 @@ def handle_command(conn, raw_text):
         if not user:
             return f"User {email} not found."
         _, e, phone, city = user
-        return (f"📋 **{e}**\n"
+        return (f" **{e}**\n"
                 f"- Phone: {phone or 'N/A'}\n"
                 f"- City: {city or 'N/A'}")
 
@@ -226,9 +205,8 @@ def handle_command(conn, raw_text):
     return "Sorry, I didn't understand that command. Type `help` to see available commands."
 
 
-# --------------------------------------------------------------------------
 # Presentation helpers
-# --------------------------------------------------------------------------
+
 def initials_of(email):
     local = (email or "?").split("@")[0]
     parts = re.split(r"[.\-_]+", local)
@@ -281,13 +259,13 @@ def render_message(role, content, user_email=None):
         <div class="msg-row msg-bot">
           <div class="avatar avatar-bot">◆</div>
           <div class="bubble bubble-bot">{body_html}</div>
-        </div>"""
+        </div>"Admin Console"
     st.markdown(row, unsafe_allow_html=True)
 
 
-# --------------------------------------------------------------------------
+
 # Global styling
-# --------------------------------------------------------------------------
+
 st.set_page_config(page_title="Admin Console", page_icon="◆", layout="wide")
 
 st.markdown(
@@ -433,6 +411,7 @@ st.markdown(
         border-radius:14px; border:1px solid var(--border);
         background:var(--surface); box-shadow:0 1px 2px rgba(15,23,42,0.04);
     }
+    
     [data-testid="stChatInput"] textarea{ font-size:14.5px; }
 
     /* login card */
@@ -443,6 +422,7 @@ st.markdown(
         box-shadow:0 10px 30px rgba(15,23,42,0.08);
         text-align:center;
     }
+    
     .login-mark{
         width:52px; height:52px; border-radius:14px; margin:0 auto 16px auto;
         background:linear-gradient(135deg, var(--primary-2), var(--primary));
@@ -450,12 +430,14 @@ st.markdown(
         color:white; font-family:'Sora', sans-serif; font-weight:700; font-size:22px;
         box-shadow:0 8px 20px rgba(67,56,202,0.3);
     }
+    
     .login-title{ font-family:'Sora', sans-serif; font-weight:700; font-size:20px; color:var(--ink); margin-bottom:4px; }
     .login-sub{ font-size:13.5px; color:var(--muted); margin-bottom:22px; }
     .login-hint{
         font-size:12px; color:var(--muted); margin-top:16px;
         background:var(--primary-soft); border-radius:8px; padding:8px 10px;
     }
+    
     .login-hint code{ font-family:'JetBrains Mono', monospace; color:var(--primary); }
 
     .stTextInput input{ border-radius:10px; border:1px solid var(--border); padding:10px 12px; }
@@ -467,6 +449,7 @@ st.markdown(
         color:white; border:none; border-radius:10px; font-weight:600;
         padding:10px 16px; box-shadow:0 4px 12px rgba(67,56,202,0.25);
     }
+    
     .main .stButton>button:hover{ filter:brightness(1.05); }
     </style>
     """,
@@ -490,13 +473,12 @@ def run_and_log(conn, cmd_text):
     try:
         reply = handle_command(conn, cmd_text)
     except Exception as exc:
-        reply = f"⚠️ Something went wrong processing that command: {exc}"
+        reply = f" Something went wrong processing that command: {exc}"
     st.session_state.messages.append({"role": "assistant", "content": reply})
 
 
-# --------------------------------------------------------------------------
 # Views
-# --------------------------------------------------------------------------
+
 def login_view():
     st.markdown('<div class="login-wrap"><div class="login-card">', unsafe_allow_html=True)
     st.markdown(
@@ -505,6 +487,7 @@ def login_view():
         '<div class="login-sub">Sign in to manage your user directory</div>',
         unsafe_allow_html=True,
     )
+    
     with st.form("login_form", clear_on_submit=False):
         email = st.text_input("Email", key="login_email", placeholder="you@example.com", label_visibility="collapsed")
         submitted = st.form_submit_button("Sign in", use_container_width=True)
@@ -524,6 +507,7 @@ def login_view():
         f'is pre-seeded so you can sign in immediately.</div>',
         unsafe_allow_html=True,
     )
+    
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 
@@ -541,13 +525,13 @@ def render_sidebar(conn):
         st.metric("Total users", user_count(conn))
 
         st.markdown('<div class="sidebar-section-label">Quick actions</div>', unsafe_allow_html=True)
-        if st.button("📋  List all users", use_container_width=True, key="qa_list"):
+        if st.button("  List all users", use_container_width=True, key="qa_list"):
             run_and_log(conn, "list users")
             st.rerun()
-        if st.button("🔢  Count users", use_container_width=True, key="qa_count"):
+        if st.button("  Count users", use_container_width=True, key="qa_count"):
             run_and_log(conn, "count users")
             st.rerun()
-        if st.button("❓  Show help", use_container_width=True, key="qa_help"):
+        if st.button("  Show help", use_container_width=True, key="qa_help"):
             run_and_log(conn, "help")
             st.rerun()
 
@@ -585,7 +569,7 @@ def chat_view():
         st.session_state.messages.append(
             {
                 "role": "assistant",
-                "content": "👋 Hello! How can I help you manage users today? Type `help` for a list of commands.",
+                "content": " Hello! How can I help you? Type `help` for a list of commands.",
             }
         )
 
